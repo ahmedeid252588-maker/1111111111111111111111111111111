@@ -1,0 +1,341 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores student and admin profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "email": { "type": "string", "description": "User's email address" },
+        "photoURL": { "type": "string", "description": "URL to user's profile picture" },
+        "role": { "type": "string", "enum": ["admin", "student"], "description": "User access level" },
+        "level": { "type": "string", "description": "Current learning level (e.g., A1)" },
+        "points": { "type": "number", "description": "Total points earned" },
+        "streak": { "type": "number", "description": "Current daily streak" },
+        "progress": { "type": "number", "description": "Overall course progress percentage" },
+        "lastActive": { "type": "string", "format": "date-time", "description": "Last activity timestamp" },
+        "joinedAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "dailyMissionCompleted": { "type": "boolean", "description": "Whether the daily mission is done" },
+        "isSubscribed": { "type": "boolean", "description": "User's subscription status" },
+        "subscriptionExpires": { "type": "string", "format": "date-time", "description": "Subscription expiration timestamp" },
+        "subscriptionStartDate": { "type": "string", "format": "date-time", "description": "Subscription start timestamp" },
+        "unlockedMonthsCount": { "type": "number", "description": "Number of months unlocked" },
+        "paidMonths": { "type": "array", "items": { "type": "number" }, "description": "List of paid month indices" },
+        "whatsapp": { "type": "string", "description": "User's WhatsApp number" },
+        "age": { "type": "string", "description": "User's age" },
+        "gender": { "type": "string", "enum": ["male", "female"], "description": "User's gender" }
+      },
+      "required": ["uid", "displayName", "email", "role", "level"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Represents a learning course",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Course title" },
+        "level": { "type": "string", "description": "Target level (e.g., A1)" },
+        "status": { "type": "string", "enum": ["active", "draft"], "description": "Course status" },
+        "description": { "type": "string", "description": "Course description" }
+      },
+      "required": ["title", "level", "status"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "A specific lesson within a course",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Lesson title" },
+        "type": { "type": "string", "enum": ["video", "file", "text", "task"], "description": "Content type" },
+        "content": { "type": "string", "description": "URL or text content" },
+        "month": { "type": "number", "description": "Month index" },
+        "week": { "type": "number", "description": "Week index" },
+        "day": { "type": "number", "description": "Day index" },
+        "displayMode": { "type": "string", "enum": ["embed", "link"], "description": "How to show content" },
+        "duration": { "type": "string", "description": "Estimated duration" },
+        "points": { "type": "number", "description": "Points awarded for completion" }
+      },
+      "required": ["title", "type", "content", "month", "week", "day"]
+    },
+    "LibraryItem": {
+      "title": "Library Item",
+      "description": "A resource in the library",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "File name" },
+        "category": { "type": "string", "enum": ["books", "videos", "audio", "other"], "description": "Resource category" },
+        "subcategoryId": { "type": "string", "description": "ID of the subcategory" },
+        "type": { "type": "string", "description": "File extension or type" },
+        "url": { "type": "string", "description": "Download or view URL" },
+        "displayMode": { "type": "string", "enum": ["link", "embed"], "description": "Display preference" },
+        "size": { "type": "string", "description": "File size" },
+        "description": { "type": "string", "description": "Short description" },
+        "tags": { "type": "array", "items": { "type": "string" }, "description": "Search tags" }
+      },
+      "required": ["name", "category", "type", "url", "subcategoryId"]
+    },
+    "LibraryCategory": {
+      "title": "Library Category",
+      "description": "A main category in the library",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Category name" }
+      },
+      "required": ["name"]
+    },
+    "LibrarySubcategory": {
+      "title": "Library Subcategory",
+      "description": "A subcategory within a library category",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Subcategory name" },
+        "categoryId": { "type": "string", "description": "ID of the parent category" }
+      },
+      "required": ["name", "categoryId"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "User subscription record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID" },
+        "studentName": { "type": "string", "description": "Full name of the student" },
+        "planName": { "type": "string", "description": "Name of the subscription plan" },
+        "amount": { "type": "number", "description": "Amount paid" },
+        "status": { "type": "string", "enum": ["active", "pending", "expired"], "description": "Subscription status" },
+        "startDate": { "type": "string", "format": "date-time", "description": "Subscription start date" },
+        "endDate": { "type": "string", "format": "date-time", "description": "Subscription end date" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Record creation date" }
+      },
+      "required": ["uid", "status", "startDate", "endDate"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System or admin notification",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Notification title" },
+        "message": { "type": "string", "description": "Notification message" },
+        "target": { "type": "string", "enum": ["all", "students", "admins", "premium"], "description": "Target audience" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"], "description": "Notification type" },
+        "status": { "type": "string", "enum": ["sent", "draft"], "description": "Notification status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "message", "target", "type", "status", "createdAt"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "German flashcard item",
+      "type": "object",
+      "properties": {
+        "word": { "type": "string", "description": "German word" },
+        "translation": { "type": "string", "description": "Arabic translation" },
+        "sentence": { "type": "string", "description": "Example sentence" },
+        "sentenceTranslation": { "type": "string", "description": "Arabic translation of the sentence" },
+        "section": { "type": "string", "description": "Flashcard section" },
+        "imageUrl": { "type": "string", "description": "Image URL" },
+        "month": { "type": "number", "description": "Month index" },
+        "week": { "type": "number", "description": "Week index" },
+        "day": { "type": "number", "description": "Day index" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["word", "translation", "month", "week", "day"]
+    },
+    "Exercise": {
+      "title": "Exercise",
+      "description": "Interactive learning exercise",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Exercise title" },
+        "type": { "type": "string", "enum": ["MATCH_WORD_TRANSLATION", "MATCH_IMAGE_WORD", "CONSTRUCT_SENTENCE", "TRUE_FALSE", "LISTENING_COMPREHENSION", "MULTIPLE_CHOICE"], "description": "Exercise type" },
+        "month": { "type": "number", "description": "Month index" },
+        "week": { "type": "number", "description": "Week index" },
+        "day": { "type": "number", "description": "Day index" },
+        "content": { "type": "object", "description": "Exercise-specific content" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "type", "month", "week", "day", "content"]
+    },
+    "SystemSettings": {
+      "title": "System Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "general": { "type": "object", "description": "General settings" },
+        "security": { "type": "object", "description": "Security settings" },
+        "notifications": { "type": "object", "description": "Notification settings" },
+        "payment": { "type": "object", "description": "Payment settings" },
+        "database": { "type": "object", "description": "Database settings" }
+      }
+    },
+    "QuizQuestion": {
+      "title": "Quiz Question",
+      "description": "A question for a quiz",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string", "description": "The question text" },
+        "type": { "type": "string", "enum": ["multiple-choice", "true-false", "fill-blank"], "description": "Question type" },
+        "options": { "type": "array", "items": { "type": "string" }, "description": "Answer options" },
+        "correctAnswer": { "type": "string", "description": "The correct answer" },
+        "explanation": { "type": "string", "description": "Explanation of the answer" },
+        "points": { "type": "number", "description": "Points awarded" },
+        "level": { "type": "string", "description": "Difficulty level" },
+        "category": { "type": "string", "description": "Category" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["question", "type", "correctAnswer", "points", "level", "category"]
+    },
+    "VocabItem": {
+      "title": "Vocabulary Item",
+      "description": "A vocabulary word or phrase",
+      "type": "object",
+      "properties": {
+        "word": { "type": "string", "description": "The word" },
+        "translation": { "type": "string", "description": "Translation" },
+        "example": { "type": "string", "description": "Example sentence" },
+        "exampleTranslation": { "type": "string", "description": "Translation of the example" },
+        "imageUrl": { "type": "string", "description": "Image URL" },
+        "level": { "type": "string", "description": "Difficulty level" },
+        "category": { "type": "string", "description": "Category" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["word", "translation", "level", "category"]
+    },
+    "SubscriptionRequest": {
+      "title": "Subscription Request",
+      "description": "A manual subscription activation request",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "User ID" },
+        "userName": { "type": "string", "description": "User display name" },
+        "userEmail": { "type": "string", "description": "User email" },
+        "userWhatsapp": { "type": "string", "description": "User WhatsApp" },
+        "level": { "type": "string", "description": "Requested level" },
+        "month": { "type": "number", "description": "Requested month" },
+        "language": { "type": "string", "enum": ["german", "english"], "description": "Requested language" },
+        "senderNumber": { "type": "string", "description": "Phone number sent from" },
+        "marketerCode": { "type": "string", "description": "Optional marketer code" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"], "description": "Request status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "level", "month", "language", "senderNumber", "status", "createdAt"]
+    },
+    "Marketer": {
+      "title": "Marketer",
+      "description": "A marketer or affiliate who refers users.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "code": { "type": "string" },
+        "commissionType": { "type": "string", "enum": ["fixed", "percentage"] },
+        "commissionValue": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "code", "commissionType", "commissionValue", "paidAmount", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/courses_german/{courseId}": {
+      "schema": "Course",
+      "description": "German learning courses"
+    },
+    "/courses_english/{courseId}": {
+      "schema": "Course",
+      "description": "English learning courses"
+    },
+    "/lessons_german/{lessonId}": {
+      "schema": "Lesson",
+      "description": "German learning lessons"
+    },
+    "/lessons_english/{lessonId}": {
+      "schema": "Lesson",
+      "description": "English learning lessons"
+    },
+    "/library_german/{itemId}": {
+      "schema": "LibraryItem",
+      "description": "German library resources"
+    },
+    "/library_english/{itemId}": {
+      "schema": "LibraryItem",
+      "description": "English library resources"
+    },
+    "/library_categories_german/{catId}": {
+      "schema": "LibraryCategory",
+      "description": "German library categories"
+    },
+    "/library_categories_english/{catId}": {
+      "schema": "LibraryCategory",
+      "description": "English library categories"
+    },
+    "/library_subcategories_german/{subId}": {
+      "schema": "LibrarySubcategory",
+      "description": "German library subcategories"
+    },
+    "/library_subcategories_english/{subId}": {
+      "schema": "LibrarySubcategory",
+      "description": "English library subcategories"
+    },
+    "/subscriptions/{subId}": {
+      "schema": "Subscription",
+      "description": "Subscription records"
+    },
+    "/notifications_german/{notifId}": {
+      "schema": "Notification",
+      "description": "German system notifications"
+    },
+    "/notifications_english/{notifId}": {
+      "schema": "Notification",
+      "description": "English system notifications"
+    },
+    "/flashcards_german/{flashcardId}": {
+      "schema": "Flashcard",
+      "description": "German flashcards"
+    },
+    "/flashcards_english/{flashcardId}": {
+      "schema": "Flashcard",
+      "description": "English flashcards"
+    },
+    "/exercises_german/{exerciseId}": {
+      "schema": "Exercise",
+      "description": "German interactive learning exercises"
+    },
+    "/exercises_english/{exerciseId}": {
+      "schema": "Exercise",
+      "description": "English interactive learning exercises"
+    },
+    "/quizzes_german/{quizId}": {
+      "schema": "QuizQuestion",
+      "description": "German quiz questions"
+    },
+    "/quizzes_english/{quizId}": {
+      "schema": "QuizQuestion",
+      "description": "English quiz questions"
+    },
+    "/vocabulary_german/{vocabId}": {
+      "schema": "VocabItem",
+      "description": "German vocabulary items"
+    },
+    "/vocabulary_english/{vocabId}": {
+      "schema": "VocabItem",
+      "description": "English vocabulary items"
+    },
+    "/system/{docId}": {
+      "schema": "SystemSettings",
+      "description": "System settings and configurations"
+    },
+    "/subscription_requests/{requestId}": {
+      "schema": "SubscriptionRequest",
+      "description": "Requests for manual subscription activation"
+    },
+    "/marketers/{marketerId}": {
+      "schema": "Marketer",
+      "description": "Marketers and affiliates"
+    }
+  }
+}

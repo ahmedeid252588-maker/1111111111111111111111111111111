@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fredoka", sans-serif;
+  --font-sans: "Tajawal", sans-serif;
+  
+  --color-duo-green: #58cc02;
+  --color-duo-blue: #1cb0f6;
+  --color-duo-orange: #ff9600;
+  --color-duo-red: #ff4b4b;
+  --color-duo-yellow: #ffc800;
+  --color-duo-purple: #ce82ff;
+  --color-bg: #ffffff;
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans text-slate-800;
+  }
+  
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+.duo-button-shadow {
+  box-shadow: 0 4px 0 0 rgba(0,0,0,0.2);
+}
+
+.duo-button-shadow:active {
+  box-shadow: 0 0 0 0 transparent;
+  transform: translateY(4px);
+}
+
+.duo-card {
+  @apply bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all;
+  box-shadow: 0 4px 0 0 #e5e7eb;
+}
+
+.duo-card:hover {
+  @apply border-slate-300;
+}
+
+.duo-card:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 0 #e5e7eb;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  15% { transform: scale(1.1); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.1); }
+  60% { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+/* Hide browser default password reveal button */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}

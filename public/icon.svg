@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="120" fill="#f5f5f5"/>
+  <text x="50%" y="55%" font-family="serif" font-size="300" font-weight="bold" fill="#4a4a4a" text-anchor="middle" dominant-baseline="middle">D</text>
+  <path d="M 320 320 C 350 280, 410 280, 440 320 C 470 360, 470 410, 440 440 C 410 470, 350 470, 320 440 C 290 410, 290 360, 320 320 Z" fill="#ff9a9a"/>
+</svg>

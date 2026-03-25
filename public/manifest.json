@@ -1,0 +1,17 @@
+{
+  "name": "DEUTSCH",
+  "short_name": "DEUTSCH",
+  "description": "إتقان اللغة الألمانية بسهولة",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#f5f5f5",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

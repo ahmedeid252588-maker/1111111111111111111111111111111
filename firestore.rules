@@ -1,0 +1,382 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Fields: uid, displayName, email, photoURL, role, level, points, streak, progress, lastActive, joinedAt, dailyMissionCompleted, isSubscribed, subscriptionExpires, subscriptionStartDate, whatsapp, age, gender, unlockedMonthsCount, paidMonths, status, currentMonth, currentWeek, currentDay, completedQuizzes
+    //
+    // Collection: courses
+    // Fields: title, level, status, description
+    //
+    // Collection: courses/{courseId}/lessons
+    // Fields: title, type, content, month, week, day, displayMode, duration, points
+    //
+    // Collection: library
+    // Fields: name, category, type, url, displayMode, size, description, tags
+    //
+    // Collection: exercises
+    // Fields: title, type, month, week, day, content
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.uid == "uH6571aYLJNzMpvX3YER3jHXlpf2" || 
+         request.auth.uid == "bSyY7AaRKbcEkyoLbiwVGmnEJ4C2" || 
+         (request.auth.token.email == "ahmedeid252588@gmail.com" && request.auth.token.email_verified == true) ||
+         (request.auth.token.email == "almansa2026@gmail.com" && request.auth.token.email_verified == true) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() < 100 &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['admin', 'student'] &&
+             data.level in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] &&
+             data.points is number &&
+             data.streak is number &&
+             data.progress is number &&
+             data.lastActive is timestamp &&
+             data.joinedAt is timestamp &&
+             data.dailyMissionCompleted is bool &&
+             (!('isSubscribed' in data) || data.isSubscribed is bool) &&
+             (!('subscriptionExpires' in data) || data.subscriptionExpires is timestamp) &&
+             (!('subscriptionStartDate' in data) || data.subscriptionStartDate is timestamp) &&
+             (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() < 20)) && 
+             (!('age' in data) || (data.age is string && data.age.size() < 10)) &&
+             (!('gender' in data) || data.gender in ['male', 'female']) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500)) &&
+             (!('unlockedMonthsCount' in data) || data.unlockedMonthsCount is number) &&
+             (!('paidMonths' in data) || data.paidMonths is list) &&
+             (!('status' in data) || data.status in ['active', 'banned', 'pending']) &&
+             (!('currentMonth' in data) || data.currentMonth is number) &&
+             (!('currentWeek' in data) || data.currentWeek is number) &&
+             (!('currentDay' in data) || data.currentDay is number) &&
+             (!('completedQuizzes' in data) || data.completedQuizzes is list) &&
+             (!('language' in data) || data.language in ['german', 'english']) &&
+             (!('subscriptions' in data) || data.subscriptions is map) &&
+             (!('referralCode' in data) || (data.referralCode is string && data.referralCode.size() < 20)) &&
+             (!('referralsCount' in data) || data.referralsCount is number) &&
+             (!('usedReferralsCount' in data) || data.usedReferralsCount is number);
+    }
+
+    function isValidCourse(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.level is string && data.level.size() > 0 && data.level.size() < 20 &&
+             data.status in ['active', 'draft'];
+    }
+
+    function isValidLesson(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.type in ['video', 'file', 'text', 'task'] &&
+             data.content is string && data.content.size() >= 0 && data.content.size() < 50000 &&
+             data.month is number &&
+             data.week is number &&
+             data.day is number &&
+             (!('order' in data) || data.order is number) &&
+             (!('displayMode' in data) || data.displayMode in ['link', 'embed']) &&
+             (!('duration' in data) || (data.duration is string && data.duration.size() < 50)) &&
+             (!('points' in data) || data.points is number) &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function isValidLibraryItem(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.category in ['books', 'videos', 'audio', 'other'] &&
+             (!('subcategoryId' in data) || (data.subcategoryId is string && data.subcategoryId.size() < 100)) &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 50 &&
+             data.url is string && data.url.size() > 0 && data.url.size() < 500;
+    }
+
+    function isValidNotification(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 2000 &&
+             data.target in ['all', 'students', 'admins', 'premium'] &&
+             data.type in ['info', 'success', 'warning', 'error'] &&
+             data.status in ['sent', 'draft'] &&
+             (!('readBy' in data) || data.readBy is list) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidFlashcard(data) {
+      return data.word is string && data.word.size() > 0 && data.word.size() < 200 &&
+             data.translation is string && data.translation.size() > 0 && data.translation.size() < 200 &&
+             (!('sentence' in data) || (data.sentence is string && data.sentence.size() < 1000)) &&
+             (!('sentenceTranslation' in data) || (data.sentenceTranslation is string && data.sentenceTranslation.size() < 1000)) &&
+             (!('section' in data) || (data.section is string && data.section.size() < 100)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 1000)) &&
+             (!('audioUrl' in data) || (data.audioUrl is string && data.audioUrl.size() < 1000)) &&
+             (!('sentenceAudioUrl' in data) || (data.sentenceAudioUrl is string && data.sentenceAudioUrl.size() < 1000)) &&
+             (!('type' in data) || data.type in ['word', 'sentence', 'both']) &&
+             data.month is number &&
+             data.week is number &&
+             data.day is number &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function isValidExercise(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.type in ['MATCH_WORD_TRANSLATION', 'CONSTRUCT_WORD', 'MATCH_IMAGE_WORD', 'TRUE_FALSE_IMAGE', 'LISTEN_CONSTRUCT_WORD', 'LISTEN_CHOOSE_IMAGE', 'CHOOSE_WORD_TRANSLATION', 'LISTEN_TRUE_FALSE', 'CONSTRUCT_SENTENCE', 'TRUE_FALSE', 'LISTENING_COMPREHENSION', 'MULTIPLE_CHOICE', 'LISTEN_CHOOSE_WORD'] &&
+             data.month is number &&
+             data.week is number &&
+             data.day is number &&
+             data.content is map &&
+             (!('createdAt' in data) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidQuizQuestion(data) {
+      return data.question is string && data.question.size() > 0 && data.question.size() < 1000 &&
+             data.type in ['multiple-choice', 'true-false', 'fill-blank'] &&
+             data.options is list && data.options.size() <= 10 &&
+             (data.correctAnswer is string || data.correctAnswer is number) &&
+             (!('explanation' in data) || (data.explanation is string && data.explanation.size() < 2000)) &&
+             data.points is number && data.points >= 0 &&
+             data.level is string && data.level.size() > 0 && data.level.size() < 50 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function isValidVocabItem(data) {
+      return data.word is string && data.word.size() > 0 && data.word.size() < 200 &&
+             data.translation is string && data.translation.size() > 0 && data.translation.size() < 200 &&
+             (!('example' in data) || (data.example is string && data.example.size() < 1000)) &&
+             (!('exampleTranslation' in data) || (data.exampleTranslation is string && data.exampleTranslation.size() < 1000)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() < 1000)) &&
+             data.level is string && data.level.size() > 0 && data.level.size() < 50 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    function isValidSystemSettings(data) {
+      return (!('general' in data) || data.general is map) &&
+             (!('security' in data) || data.security is map) &&
+             (!('notifications' in data) || data.notifications is map) &&
+             (!('payment' in data) || data.payment is map) &&
+             (!('database' in data) || data.database is map);
+    }
+
+    function isValidSubscriptionRequest(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.userEmail is string && data.userEmail.size() > 0 && data.userEmail.size() < 100 &&
+             (!('userWhatsapp' in data) || (data.userWhatsapp is string && data.userWhatsapp.size() < 50)) &&
+             data.level is string && data.level.size() > 0 && data.level.size() < 10 &&
+             data.month is number &&
+             data.language in ['german', 'english'] &&
+             data.senderNumber is string && data.senderNumber.size() > 0 && data.senderNumber.size() < 50 &&
+             (!('marketerCode' in data) || (data.marketerCode is string && data.marketerCode.size() < 50)) &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMarketer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() < 50 &&
+             data.code is string && data.code.size() > 0 && data.code.size() < 50 &&
+             data.commissionType in ['fixed', 'percentage'] &&
+             data.commissionValue is number && data.commissionValue >= 0 &&
+             data.paidAmount is number && data.paidAmount >= 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isSubscribed(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) && 
+             get(/databases/$(database)/documents/users/$(userId)).data.subscriptions.size() > 0;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow get: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow list: if isAuthenticated(); // Required for leaderboard
+      allow create: if isAuthenticated() && 
+                  isOwner(userId) &&
+                  isValidUser(request.resource.data) &&
+                  (request.resource.data.role == 'student' || (isAdmin() && request.resource.data.role == 'admin')) &&
+                  request.resource.data.points == 0 &&
+                  request.resource.data.streak == 0 &&
+                  request.resource.data.progress == 0;
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                  (isAdmin() || (isOwner(userId) && 
+                    areImmutableFieldsUnchanged(['isSubscribed', 'subscriptionStartDate', 'subscriptionExpires']) && 
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['referralsCount']) || (!('referralsCount' in resource.data) && request.resource.data.referralsCount == 0)) &&
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['usedReferralsCount']) || (!('usedReferralsCount' in resource.data) && request.resource.data.usedReferralsCount == 0)) &&
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['referralCode']) || !('referralCode' in resource.data)) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'lastActive', 'dailyMissionCompleted', 'whatsapp', 'age', 'gender', 'progress', 'points', 'streak', 'completedQuizzes', 'currentMonth', 'currentWeek', 'currentDay', 'isSubscribed', 'subscriptionStartDate', 'subscriptionExpires', 'level', 'language', 'referralCode', 'referralsCount', 'usedReferralsCount'])));
+      allow delete: if isAdmin();
+    }
+
+    match /courses_german/{courseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidCourse(request.resource.data);
+      allow update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /courses_english/{courseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidCourse(request.resource.data);
+      allow update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /lessons_german/{lessonId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidLesson(request.resource.data);
+      allow update: if isAdmin() && isValidLesson(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /lessons_english/{lessonId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidLesson(request.resource.data);
+      allow update: if isAdmin() && isValidLesson(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /library_german/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidLibraryItem(request.resource.data);
+      allow update: if isAdmin() && isValidLibraryItem(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /library_english/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidLibraryItem(request.resource.data);
+      allow update: if isAdmin() && isValidLibraryItem(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /flashcards_german/{flashcardId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidFlashcard(request.resource.data);
+      allow update: if isAdmin() && isValidFlashcard(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /flashcards_english/{flashcardId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidFlashcard(request.resource.data);
+      allow update: if isAdmin() && isValidFlashcard(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /exercises_german/{exerciseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidExercise(request.resource.data);
+      allow update: if isAdmin() && isValidExercise(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /exercises_english/{exerciseId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidExercise(request.resource.data);
+      allow update: if isAdmin() && isValidExercise(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /library_categories_german/{catId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    match /library_categories_english/{catId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /library_subcategories_german/{subId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    match /library_subcategories_english/{subId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /subscriptions/{subId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /notifications_german/{notifId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidNotification(request.resource.data);
+      allow update: if (isAdmin() && isValidNotification(request.resource.data)) || 
+                      (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
+      allow delete: if isAdmin();
+    }
+    match /notifications_english/{notifId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidNotification(request.resource.data);
+      allow update: if (isAdmin() && isValidNotification(request.resource.data)) || 
+                      (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']));
+      allow delete: if isAdmin();
+    }
+
+    match /quizzes_german/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidQuizQuestion(request.resource.data);
+      allow update: if isAdmin() && isValidQuizQuestion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /quizzes_english/{quizId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidQuizQuestion(request.resource.data);
+      allow update: if isAdmin() && isValidQuizQuestion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /vocabulary_german/{vocabId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidVocabItem(request.resource.data);
+      allow update: if isAdmin() && isValidVocabItem(request.resource.data);
+      allow delete: if isAdmin();
+    }
+    match /vocabulary_english/{vocabId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidVocabItem(request.resource.data);
+      allow update: if isAdmin() && isValidVocabItem(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /system/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidSystemSettings(request.resource.data);
+      allow update: if isAdmin() && isValidSystemSettings(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /subscription_requests/{requestId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidSubscriptionRequest(request.resource.data);
+      allow update: if isAdmin() && isValidSubscriptionRequest(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /marketers/{marketerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidMarketer(request.resource.data);
+      allow update: if isAdmin() && isValidMarketer(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
